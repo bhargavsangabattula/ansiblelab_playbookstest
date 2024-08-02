@@ -1,0 +1,26 @@
+- name: Query node for leader information
+      shell: "microk8s kubectl get nodes -o=jsonpath='{.items[?(@.metadata.annotations[\"microk8s.io/role\"]==\"leader\")].metadata.name}'"
+      register: leader_result
+      ignore_errors: yes
+
+    - name: Collect leader information
+      set_fact:
+        leader_node: "{{ leader_result.stdout }}"
+      when: leader_result.stdout | length > 0
+
+    - name: Set the leader node as designated host
+      set_fact:
+        designated_host: "{{ hostvars[item].ansible_fqdn }}"
+      with_items: "{{ groups[microk8s_group_HA] }}"
+      when: item == leader_node
+      run_once: true
+
+    - name: Fail if no designated host found
+      fail:
+        msg: "No designated host could be determined from the HA group"
+      when: designated_host is not defined
+
+    - name: Debug designated host
+      debug:
+        msg: "Designated host (leader node) is {{ designated_host }}"
+      when: designated_host is defined
