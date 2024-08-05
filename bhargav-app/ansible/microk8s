@@ -31,3 +31,4 @@
 
 microk8s kubectl get nodes -o=jsonpath='{range .items[*]}{.metadata.name} {.metadata.annotations}{"\n"}{end}'
 "microk8s.kubectl get nodes -o json | jq -r '.items[] | select(.metadata.annotations[\"microk8s.io/role\"] == \"leader\") | .metadata.name'"
+microk8s.kubectl -n kube-system get configmap dqlite -o jsonpath='{.data.cluster}'
