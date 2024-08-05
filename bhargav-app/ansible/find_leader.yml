@@ -1,0 +1,45 @@
+---
+- name: Find the leader node dynamically
+  hosts: microk8s_masters
+  gather_facts: no
+  tasks:
+    - name: Query nodes for controlplane role
+      shell: "sudo microk8s.kubectl get nodes -o json"
+      register: controlplane_result
+      ignore_errors: yes
+
+    - name: Print JSON output for debugging
+      debug:
+        var: controlplane_result.stdout
+
+    - name: Parse controlplane nodes
+      set_fact:
+        controlplane_nodes: "{{ controlplane_result.stdout | from_json | json_query('items[?labels.\"node.kubernetes.io/controlplane\" == `microk8s-controlplane`].metadata.name') }}"
+      when: controlplane_result.stdout | length > 0
+
+    - name: Debug controlplane node information
+      debug:
+        var: controlplane_nodes
+
+    - name: Set the first controlplane node as designated host
+      set_fact:
+        designated_host: "{{ controlplane_nodes[0] }}"
+      when: controlplane_nodes | length > 0
+      run_once: true
+
+    - name: Fail if no designated host found
+      fail:
+        msg: "No designated host could be determined from the controlplane nodes"
+      when: designated_host is not defined
+
+    - name: Debug designated host
+      debug:
+        var: designated_host
+      when: designated_host is defined
+
+    - name: Save designated host to file
+      copy:
+        content: "{{ designated_host }}"
+        dest: /tmp/designated_host.txt
+      when: designated_host is defined
+      delegate_to: localhost
