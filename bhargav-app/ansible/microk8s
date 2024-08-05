@@ -1,12 +1,16 @@
 ---
 - name: Determine the leader node dynamically
-  hosts: localhost
+  hosts: microk8s_masters
   gather_facts: no
   tasks:
     - name: Query nodes for controlplane role
       shell: "sudo microk8s.kubectl get nodes -o json"
       register: controlplane_result
       ignore_errors: yes
+
+    - name: Print JSON output for debugging
+      debug:
+        var: controlplane_result.stdout
 
     - name: Parse controlplane nodes
       set_fact:
@@ -32,7 +36,6 @@
       debug:
         msg: "Designated host (controlplane node) is {{ designated_host }}"
       when: designated_host is defined
-
 
 - name: MicroK8s setup on worker nodes
   hosts: microk8s_workers
@@ -84,6 +87,7 @@ vars:
   microk8s_group_HA: 'microk8s_masters'
   microk8s_group_WORKERS: 'microk8s_workers'
   microk8s_ip_regex_HA: 'your_ip_regex_here'
+
 
 
 
