@@ -1,32 +1,88 @@
-    - name: Query node for leader information
-      shell: "microk8s kubectl get nodes -o=jsonpath='{.items[?(@.metadata.annotations[\"microk8s.io/role\"]==\"leader\")].metadata.name}'"
-      register: leader_result
+   ---
+- name: Determine the leader node dynamically
+  hosts: microk8s_masters
+  gather_facts: no
+  tasks:
+    - name: Query nodes for controlplane role
+      shell: "sudo microk8s.kubectl get nodes -o json | jq -r '.items[] | select(.metadata.labels[\"node.kubernetes.io/instance-type\"] == \"microk8s-controlplane\") | .metadata.name'"
+      register: controlplane_result
       ignore_errors: yes
 
-    - name: Collect leader information
+    - name: Collect controlplane information
       set_fact:
-        leader_node: "{{ leader_result.stdout }}"
-      when: leader_result.stdout | length > 0
+        controlplane_nodes: "{{ controlplane_result.stdout_lines }}"
+      when: controlplane_result.stdout | length > 0
 
-    - name: Debug leader node information
+    - name: Debug controlplane node information
       debug:
-        msg: "Leader node found: {{ leader_node }}"
+        msg: "Controlplane nodes found: {{ controlplane_nodes }}"
 
-    - name: Set the leader node as designated host
+    - name: Set the first controlplane node as designated host
       set_fact:
-        designated_host: "{{ leader_node }}"
-      when: leader_node is defined
+        designated_host: "{{ controlplane_nodes[0] }}"
+      when: controlplane_nodes | length > 0
       run_once: true
 
     - name: Fail if no designated host found
       fail:
-        msg: "No designated host could be determined from the HA group"
+        msg: "No designated host could be determined from the controlplane nodes"
       when: designated_host is not defined
 
     - name: Debug designated host
       debug:
-        msg: "Designated host (leader node) is {{ designated_host }}"
+        msg: "Designated host (controlplane node) is {{ designated_host }}"
       when: designated_host is defined
+
+- name: MicroK8s setup on worker nodes
+  hosts: microk8s_workers
+  become: yes
+  tasks:
+    - block:
+        - name: Waiting for microk8s to be ready on microk8s master node
+          command: "sudo microk8s status --wait-ready"
+          delegate_to: "{{ designated_host }}"
+          delegate_facts: true
+          changed_when: false
+
+        - name: Get the microk8s join command from the microk8s master
+          shell: "sudo microk8s add-node | grep -E -m1 'microk8s join {{ microk8s_ip_regex_HA }}'"
+          delegate_to: "{{ designated_host }}"
+          delegate_facts: true
+          changed_when: false
+          register: microk8s_join_command
+
+        - name: Get microk8s cluster nodes
+          command: "sudo microk8s kubectl get node"
+          delegate_to: "{{ designated_host }}"
+          delegate_facts: true
+          changed_when: false
+          register: microk8s_cluster_node
+
+        - name: Waiting for microk8s to be ready on microk8s worker node
+          command: "sudo microk8s status --wait-ready"
+          changed_when: false
+          register: status_command_output
+          failed_when:
+            - "'This MicroK8s deployment is acting as a node in a cluster.' not in status_command_output.stdout_lines"
+            - status_command_output.rc > 0
+
+        - name: Set the microk8s join command on the microk8s node
+          command: "{{ microk8s_join_command.stdout }} --worker"
+          when: microk8s_cluster_node.stdout.find(inventory_hostname) == -1
+          register: join_command_output
+          failed_when:
+            - "'already known to dqlite' not in join_command_output.stdout"
+            - join_command_output.rc > 0
+
+      when:
+        - designated_host is defined
+        - inventory_hostname != designated_host
+        - inventory_hostname in groups[microk8s_group_WORKERS]
+
+vars:
+  microk8s_group_HA: 'microk8s_masters'
+  microk8s_group_WORKERS: 'microk8s_workers'
+  microk8s_ip_regex_HA: 'your_ip_regex_here'
 
 
 microk8s kubectl get nodes -o=jsonpath='{range .items[*]}{.metadata.name} {.metadata.annotations}{"\n"}{end}'
