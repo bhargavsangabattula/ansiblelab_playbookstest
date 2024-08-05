@@ -10,7 +10,7 @@
 
     - name: Parse controlplane nodes
       set_fact:
-        controlplane_nodes: "{{ controlplane_result.stdout | from_json | json_query('items[?contains(`metadata.labels.node.kubernetes.io/controlplane`, `microk8s-controlplane`)].metadata.name') }}"
+        controlplane_nodes: "{{ controlplane_result.stdout | from_json | json_query('items[?labels.\"node.kubernetes.io/controlplane\" == `microk8s-controlplane`].metadata.name') }}"
       when: controlplane_result.stdout | length > 0
 
     - name: Debug controlplane node information
@@ -32,6 +32,7 @@
       debug:
         msg: "Designated host (controlplane node) is {{ designated_host }}"
       when: designated_host is defined
+
 
 - name: MicroK8s setup on worker nodes
   hosts: microk8s_workers
