@@ -1,16 +1,16 @@
-   ---
+---
 - name: Determine the leader node dynamically
-  hosts: microk8s_masters
+  hosts: localhost
   gather_facts: no
   tasks:
     - name: Query nodes for controlplane role
-      shell: "sudo microk8s.kubectl get nodes -o json | jq -r '.items[] | select(.metadata.labels[\"node.kubernetes.io/instance-type\"] == \"microk8s-controlplane\") | .metadata.name'"
+      shell: "sudo microk8s.kubectl get nodes -o json"
       register: controlplane_result
       ignore_errors: yes
 
-    - name: Collect controlplane information
+    - name: Parse controlplane nodes
       set_fact:
-        controlplane_nodes: "{{ controlplane_result.stdout_lines }}"
+        controlplane_nodes: "{{ controlplane_result.stdout | from_json | json_query('items[?contains(`metadata.labels.node.kubernetes.io/controlplane`, `microk8s-controlplane`)].metadata.name') }}"
       when: controlplane_result.stdout | length > 0
 
     - name: Debug controlplane node information
@@ -83,6 +83,7 @@ vars:
   microk8s_group_HA: 'microk8s_masters'
   microk8s_group_WORKERS: 'microk8s_workers'
   microk8s_ip_regex_HA: 'your_ip_regex_here'
+
 
 
 microk8s kubectl get nodes -o=jsonpath='{range .items[*]}{.metadata.name} {.metadata.annotations}{"\n"}{end}'
