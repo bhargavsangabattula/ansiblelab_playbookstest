@@ -27,3 +27,6 @@
       debug:
         msg: "Designated host (leader node) is {{ designated_host }}"
       when: designated_host is defined
+
+
+microk8s kubectl get nodes -o=jsonpath='{range .items[*]}{.metadata.name} {.metadata.annotations}{"\n"}{end}'
