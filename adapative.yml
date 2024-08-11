@@ -1,0 +1,48 @@
+Conclusion: To maintain an HA cluster, it is essential to ensure that there are always three nodes available to meet the requirements. To form this HA cluster, we need to create one standby node. In case of any node failure, the cluster will continue to function properly with the remaining nodes. Additionally, when removing the first node, there should be no issues as a designated host will be taken from the other three nodes. However, to successfully run the job, we need to comment out the removed or terminated node from the inventory, as it is important to gather facts as the first step and check the node's reachability from the groups.
+
+
+{
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "type": "AdaptiveCard",
+  "version": "1.4",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": "Prometheus Alert Notification",
+      "weight": "Bolder",
+      "size": "Large"
+    },
+    {
+      "type": "TextBlock",
+      "text": "{{alert_status}}: {{alert_name}}",
+      "weight": "Bolder",
+      "size": "Medium",
+      "color": "{{severity_color}}"
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        { "title": "Expression:", "value": "{{alert_expression}}" },
+        { "title": "Duration:", "value": "{{alert_duration}}" },
+        { "title": "Labels:", "value": "{{alert_labels}}" },
+        { "title": "Annotations:", "value": "Description: {{alert_description}}, Value: {{alert_value}}, Summary: {{alert_summary}}" }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "Source: {{alert_source_url}}",
+      "wrap": true,
+      "color": "Accent"
+    },
+    {
+      "type": "ActionSet",
+      "actions": [
+        {
+          "type": "Action.OpenUrl",
+          "title": "View Alert in Prometheus",
+          "url": "{{alert_source_url}}"
+        }
+      ]
+    }
+  ]
+}
