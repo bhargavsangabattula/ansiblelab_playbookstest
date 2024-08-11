@@ -1,6 +1,3 @@
-Conclusion: To maintain an HA cluster, it is essential to ensure that there are always three nodes available to meet the requirements. To form this HA cluster, we need to create one standby node. In case of any node failure, the cluster will continue to function properly with the remaining nodes. Additionally, when removing the first node, there should be no issues as a designated host will be taken from the other three nodes. However, to successfully run the job, we need to comment out the removed or terminated node from the inventory, as it is important to gather facts as the first step and check the node's reachability from the groups.
-
-
 {
   "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
   "type": "AdaptiveCard",
@@ -14,23 +11,23 @@ Conclusion: To maintain an HA cluster, it is essential to ensure that there are 
     },
     {
       "type": "TextBlock",
-      "text": "{{alert_status}}: {{alert_name}}",
+      "text": "{{ if eq .Status \"firing\" }}FIRING{{ else }}RESOLVED{{ end }}: {{ .CommonLabels.alertname }}",
       "weight": "Bolder",
       "size": "Medium",
-      "color": "{{severity_color}}"
+      "color": "{{ if eq .CommonLabels.severity \"critical\" }}Attention{{ else if eq .CommonLabels.severity \"warning\" }}Warning{{ else }}Good{{ end }}"
     },
     {
       "type": "FactSet",
       "facts": [
-        { "title": "Expression:", "value": "{{alert_expression}}" },
-        { "title": "Duration:", "value": "{{alert_duration}}" },
-        { "title": "Labels:", "value": "{{alert_labels}}" },
-        { "title": "Annotations:", "value": "Description: {{alert_description}}, Value: {{alert_value}}, Summary: {{alert_summary}}" }
+        { "title": "Expression:", "value": "{{ .Annotations.expression }}" },
+        { "title": "Duration:", "value": "{{ .Annotations.duration }}" },
+        { "title": "Labels:", "value": "{{ range $key, $value := .Labels }}{{ $key }}: {{ $value }}{{ end }}" },
+        { "title": "Annotations:", "value": "Description: {{ .Annotations.description }}, Value: {{ .Annotations.value }}, Summary: {{ .Annotations.summary }}" }
       ]
     },
     {
       "type": "TextBlock",
-      "text": "Source: {{alert_source_url}}",
+      "text": "Source: {{ .Annotations.source_url }}",
       "wrap": true,
       "color": "Accent"
     },
@@ -40,9 +37,10 @@ Conclusion: To maintain an HA cluster, it is essential to ensure that there are 
         {
           "type": "Action.OpenUrl",
           "title": "View Alert in Prometheus",
-          "url": "{{alert_source_url}}"
+          "url": "{{ .Annotations.source_url }}"
         }
       ]
     }
   ]
 }
+
