@@ -12,7 +12,7 @@
     },
     {
       "type": "TextBlock",
-      "text": "@{triggerBody()?['text']}",
+      "text": "Alert Details: \n@{triggerBody()?['text']}",
       "wrap": true
     },
     {
@@ -21,7 +21,7 @@
         {
           "type": "Action.OpenUrl",
           "title": "View Alert in Prometheus",
-          "url": "https://prometheus.example.com/alerts"
+          "url": "@{triggerBody()?['annotations']['source']}"
         }
       ]
     }
