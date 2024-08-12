@@ -5,31 +5,15 @@
   "body": [
     {
       "type": "TextBlock",
-      "text": "Prometheus Alert Notification",
-      "weight": "Bolder",
-      "size": "Large"
-    },
-    {
-      "type": "TextBlock",
-      "text": "{{ if eq .Status \"firing\" }}FIRING{{ else }}RESOLVED{{ end }}: {{ .CommonLabels.alertname }}",
-      "weight": "Bolder",
       "size": "Medium",
-      "color": "{{ if eq .CommonLabels.severity \"critical\" }}Attention{{ else if eq .CommonLabels.severity \"warning\" }}Warning{{ else }}Good{{ end }}"
-    },
-    {
-      "type": "FactSet",
-      "facts": [
-        { "title": "Expression:", "value": "{{ .Annotations.expression }}" },
-        { "title": "Duration:", "value": "{{ .Annotations.duration }}" },
-        { "title": "Labels:", "value": "{{ range $key, $value := .Labels }}{{ $key }}: {{ $value }}{{ end }}" },
-        { "title": "Annotations:", "value": "Description: {{ .Annotations.description }}, Value: {{ .Annotations.value }}, Summary: {{ .Annotations.summary }}" }
-      ]
+      "weight": "Bolder",
+      "text": "Prometheus Alert (Firing)",
+      "color": "Attention"
     },
     {
       "type": "TextBlock",
-      "text": "Source: {{ .Annotations.source_url }}",
-      "wrap": true,
-      "color": "Accent"
+      "text": "@{triggerBody()?['text']}",
+      "wrap": true
     },
     {
       "type": "ActionSet",
@@ -37,10 +21,12 @@
         {
           "type": "Action.OpenUrl",
           "title": "View Alert in Prometheus",
-          "url": "{{ .Annotations.source_url }}"
+          "url": "https://prometheus.example.com/alerts"
         }
       ]
     }
-  ]
+  ],
+  "msteams": {
+    "width": "Full"
+  }
 }
-
