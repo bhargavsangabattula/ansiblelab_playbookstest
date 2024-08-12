@@ -21,7 +21,7 @@
         {
           "type": "Action.OpenUrl",
           "title": "View Alert in Prometheus",
-          "url": "@{triggerBody()?['annotations']['source']}"
+          "url": "@{triggerBody()?['alert']['source']}"
         }
       ]
     }
