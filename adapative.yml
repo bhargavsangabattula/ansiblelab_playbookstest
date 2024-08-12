@@ -12,17 +12,16 @@
     },
     {
       "type": "TextBlock",
-      "text": "Alert Details: \n@{triggerBody()?['text']}",
+      "text": "Alert Details:",
+      "weight": "Bolder",
       "wrap": true
     },
     {
-      "type": "ActionSet",
-      "actions": [
-        {
-          "type": "Action.OpenUrl",
-          "title": "View Alert in Prometheus",
-          "url": "@{triggerBody()?['annotations']['Source']}"
-        }
+      "type": "FactSet",
+      "facts": [
+        { "title": "Alert Name", "value": "@{triggerBody()?['commonLabels']['alertname']}" },
+        { "title": "Severity", "value": "@{triggerBody()?['commonLabels']['severity']}" },
+        { "title": "Description", "value": "@{triggerBody()?['annotations']['description']}" }
       ]
     }
   ],
