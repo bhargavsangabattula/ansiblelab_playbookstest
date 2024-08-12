@@ -8,7 +8,8 @@
       "size": "Medium",
       "weight": "Bolder",
       "text": "Prometheus Alert (Firing)",
-      "color": "Attention"
+      "color": "Attention",
+      "wrap": true
     },
     {
       "type": "TextBlock",
@@ -17,12 +18,70 @@
       "wrap": true
     },
     {
-      "type": "FactSet",
-      "facts": [
-        { "title": "Alert Name", "value": "@{triggerBody()?['commonLabels']['alertname']}" },
-        { "title": "Severity", "value": "@{triggerBody()?['commonLabels']['severity']}" },
-        { "title": "Description", "value": "@{triggerBody()?['annotations']['description']}" }
-      ]
+      "type": "TextBlock",
+      "text": "Alert Name: @{triggerBody()?['commonLabels']['alertname']}",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "Severity: @{triggerBody()?['commonLabels']['severity']}",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "Description: @{triggerBody()?['annotations']['description']}",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "Source: @{triggerBody()?['annotations']['Source']}",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "size": "Small",
+      "text": "Labels:",
+      "weight": "Bolder",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": " - Instance: @{triggerBody()?['commonLabels']['instance']}",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": " - Job: @{triggerBody()?['commonLabels']['job']}",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "Annotations:",
+      "weight": "Bolder",
+      "size": "Small",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": " - Summary: @{triggerBody()?['annotations']['summary']}",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": " - Description: @{triggerBody()?['annotations']['description']}",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "size": "Small",
+      "text": " - Additional Info: @{triggerBody()?['annotations']['someOtherInfo']}",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "-----------------------------------",
+      "wrap": true,
+      "separator": true
     }
   ],
   "msteams": {
