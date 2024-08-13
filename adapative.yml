@@ -1,90 +1,59 @@
-{
-  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-  "type": "AdaptiveCard",
-  "version": "1.4",
-  "body": [
-    {
-      "type": "TextBlock",
-      "size": "Medium",
-      "weight": "Bolder",
-      "text": "Prometheus Alert (Firing)",
-      "color": "Attention",
-      "wrap": true
-    },
-    {
-      "type": "TextBlock",
-      "text": "Alert Details:",
-      "weight": "Bolder",
-      "wrap": true
-    },
-    {
-      "type": "TextBlock",
-      "text": "Alert Name: @{triggerBody()?['commonLabels']['alertname']}",
-      "wrap": true
-    },
-    {
-      "type": "TextBlock",
-      "text": "Severity: @{triggerBody()?['commonLabels']['severity']}",
-      "wrap": true
-    },
-    {
-      "type": "TextBlock",
-      "text": "Description: @{triggerBody()?['annotations']['description']}",
-      "wrap": true
-    },
-    {
-      "type": "TextBlock",
-      "text": "Source: @{triggerBody()?['annotations']['Source']}",
-      "wrap": true
-    },
-    {
-      "type": "TextBlock",
-      "size": "Small",
-      "text": "Labels:",
-      "weight": "Bolder",
-      "wrap": true
-    },
-    {
-      "type": "TextBlock",
-      "text": " - Instance: @{triggerBody()?['commonLabels']['instance']}",
-      "wrap": true
-    },
-    {
-      "type": "TextBlock",
-      "text": " - Job: @{triggerBody()?['commonLabels']['job']}",
-      "wrap": true
-    },
-    {
-      "type": "TextBlock",
-      "text": "Annotations:",
-      "weight": "Bolder",
-      "size": "Small",
-      "wrap": true
-    },
-    {
-      "type": "TextBlock",
-      "text": " - Summary: @{triggerBody()?['annotations']['summary']}",
-      "wrap": true
-    },
-    {
-      "type": "TextBlock",
-      "text": " - Description: @{triggerBody()?['annotations']['description']}",
-      "wrap": true
-    },
-    {
-      "type": "TextBlock",
-      "size": "Small",
-      "text": " - Additional Info: @{triggerBody()?['annotations']['someOtherInfo']}",
-      "wrap": true
-    },
-    {
-      "type": "TextBlock",
-      "text": "-----------------------------------",
-      "wrap": true,
-      "separator": true
-    }
-  ],
-  "msteams": {
-    "width": "Full"
-  }
-}
+---
+- name: Check and apply RDS pending maintenance with email alerts
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    rds_instance_id: "your-rds-instance-id"
+    aws_region: "your-aws-region"
+    email_recipients: "recipient@example.com"
+    email_sender: "sender@example.com"
+    email_smtp_server: "smtp.example.com"
+    email_smtp_port: 587
+    email_subject_prefix: "[RDS Maintenance Notification]"
+
+  tasks:
+    - name: Check for pending maintenance actions
+      aws_rds_info:
+        db_instance_identifier: "{{ rds_instance_id }}"
+        region: "{{ aws_region }}"
+      register: rds_info
+
+    - name: Extract pending maintenance actions
+      set_fact:
+        pending_maintenance: "{{ rds_info.db_instances[0].pending_modified_values | default([]) }}"
+
+    - name: Send email alert before applying maintenance
+      mail:
+        host: "{{ email_smtp_server }}"
+        port: "{{ email_smtp_port }}"
+        from: "{{ email_sender }}"
+        to: "{{ email_recipients }}"
+        subject: "{{ email_subject_prefix }} Pending RDS Maintenance on {{ rds_instance_id }}"
+        body: |
+          The following pending maintenance actions were found for RDS instance {{ rds_instance_id }}:
+          {{ pending_maintenance | to_nice_json }}
+          
+          The maintenance will be applied shortly.
+      when: pending_maintenance | length > 0
+
+    - name: Apply pending maintenance if available
+      when: pending_maintenance | length > 0
+      aws_rds:
+        db_instance_identifier: "{{ rds_instance_id }}"
+        apply_immediately: yes
+      register: rds_apply
+
+    - name: Send email alert after applying maintenance
+      mail:
+        host: "{{ email_smtp_server }}"
+        port: "{{ email_smtp_port }}"
+        from: "{{ email_sender }}"
+        to: "{{ email_recipients }}"
+        subject: "{{ email_subject_prefix }} RDS Maintenance Applied on {{ rds_instance_id }}"
+        body: |
+          The pending maintenance actions have been successfully applied to RDS instance {{ rds_instance_id }}.
+          
+          Maintenance Details:
+          {{ rds_apply | to_nice_json }}
+      when: pending_maintenance | length > 0
