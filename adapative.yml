@@ -1,5 +1,5 @@
 ---
-- name: Check and apply RDS pending maintenance with email alerts
+- name: Check and apply RDS pending maintenance with scheduled time and email alerts
   hosts: localhost
   gather_facts: false
 
@@ -11,6 +11,7 @@
     email_smtp_server: "smtp.example.com"
     email_smtp_port: 587
     email_subject_prefix: "[RDS Maintenance Notification]"
+    scheduled_time: "2024-08-19 02:45:00"  # Set the scheduled time in UTC
 
   tasks:
     - name: Check for pending maintenance actions
@@ -34,8 +35,15 @@
           The following pending maintenance actions were found for RDS instance {{ rds_instance_id }}:
           {{ pending_maintenance | to_nice_json }}
           
-          The maintenance will be applied shortly.
+          The maintenance is scheduled to be applied at {{ scheduled_time }} (UTC).
       when: pending_maintenance | length > 0
+
+    - name: Wait until the scheduled time before applying maintenance
+      when: pending_maintenance | length > 0
+      wait_for:
+        timeout: "{{ (ansible_date_time.iso8601 | to_datetime('%Y-%m-%dT%H:%M:%SZ') | diff(scheduled_time | to_datetime('%Y-%m-%d %H:%M:%S'))).total_seconds() | int }}"
+        state: present
+      delegate_to: localhost
 
     - name: Apply pending maintenance if available
       when: pending_maintenance | length > 0
