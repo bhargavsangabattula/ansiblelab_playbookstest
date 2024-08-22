@@ -66,37 +66,32 @@
           {{ rds_apply | to_nice_json }}
       when: pending_maintenance | length > 0
 
-      https://www.udemy.com/course/100-days-of-code/learn/lecture/17824302#overview
+    
+Introduction to My MicroK8s Deployment
+MicroK8s is a lightweight version of Kubernetes, perfect for setting up quickly and managing containers without a lot of hassle. It’s ideal for both development and production because it doesn’t require heavy resources and is easy to configure.
 
-      Master Python by building 100 projects in 100 days. Learn data science, automation, build websites, games and apps!
+Overview of My MicroK8s Setup
+Here’s a breakdown of how my MicroK8s setup is organized:
 
+Server Groups:
 
+I’ve organized my servers into groups, like masters, workers, and kops_hosts. These groups are defined in a YAML file (inv_development.yml), making it easier to manage and keep track of them.
+Master and Worker Nodes:
 
-      Introduction to MicroK8s Deployment in Your Infrastructure
-MicroK8s is a lightweight, single-package Kubernetes distribution developed by Canonical, designed to deploy and manage Kubernetes clusters with minimal overhead. It is particularly suitable for scenarios where ease of deployment, reduced resource consumption, and minimal setup time are critical. The simplicity of MicroK8s, coupled with its ability to provide a full Kubernetes environment, makes it an excellent choice for development, testing, and production workloads in various cloud and on-premise environments.
-
-Overview of Your MicroK8s Infrastructure
-Based on the provided documentation and screenshots, your MicroK8s deployment is tailored to the requirements of your organization, supporting both development and production environments with a focus on high availability (HA) and fault tolerance.
-
-Inventory Management:
-
-The inventory details in your infrastructure are managed under a YAML file (e.g., inv_development.yml). This file organizes servers into specific groups such as masters, workers, and kops_hosts. Each group contains relevant hostnames and roles, facilitating dynamic inventory management.
-Master and Worker Node Configuration:
-
-Your setup consists of both master and worker nodes distributed across multiple availability zones. This distribution helps ensure that your system is resilient to failures and can handle workloads efficiently. The master nodes are configured to be part of an HA cluster, while worker nodes are provisioned to handle application workloads.
+The setup includes both master nodes (which control the cluster) and worker nodes (which run the applications). These nodes are spread across different availability zones to ensure high availability. If one zone goes down, the others keep running smoothly.
 DNS and Load Balancing:
 
-A DNS round-robin configuration (kube-api-dev02) is used for load balancing the Kubernetes API servers across master nodes. This approach ensures that the load is evenly distributed, and failover mechanisms are in place in case of node failures.
-Ansible Playbooks and Group Vars:
+I use DNS round-robin (like kube-api-dev02) to balance the load between the master nodes. This setup ensures that requests are distributed evenly, preventing any single master node from getting overloaded.
+Ansible Automation:
 
-Your infrastructure leverages Ansible playbooks for automating the deployment and configuration of MicroK8s clusters. The playbooks include specific group variables for different environments, such as dev02_microk8s_master.yml for master nodes and dev02_microk8s_worker.yml for worker nodes. These files define key parameters like instance type, AMI details, and managed secrets.
-Automation and Provisioning:
+To automate the deployment and configuration of my MicroK8s clusters, I use Ansible playbooks. These playbooks specify everything, from which servers are masters or workers to what resources they should use.
+Provisioning EC2 Instances:
 
-EC2 instances are provisioned using Ansible templates, which automate the creation and setup of instances in your AWS environment. The templates define the necessary steps to deploy hosts, install required components, and configure the software environment.
+I use templates to automatically create and set up EC2 instances in my AWS environment. This makes it easy to deploy new servers with all the necessary software and configurations in place.
 Testing and Validation:
 
-Test cases are executed to validate the MicroK8s installation and configuration process. For instance, running the microk8s-install and configure (develop) job verifies that the setup is correct and that DNS records are properly created in the IPA (Identity, Policy, Audit) system for each master node's IP address.
-Production Use Case:
+After setting up, I run test cases to ensure everything is working as expected. For example, I check that the MicroK8s installation is successful and that the DNS records are correctly created for each master node.
+Production Environment:
 
-In your production environment, the infrastructure consists of multiple master nodes and worker nodes, with specific roles assigned to each. The configuration ensures that the system can handle production workloads efficiently and reliably.
-This deployment strategy highlights a well-architected approach to managing Kubernetes clusters, ensuring high availability, scalability, and robust automation practices within your organization.
+In production, I’ve set up multiple master and worker nodes to handle real-world workloads. This ensures that my system is robust, scalable, and ready for any demand.
+This setup helps me manage my Kubernetes clusters efficiently, with automation taking care of most of the heavy lifting, and ensures that everything runs smoothly even in the face of unexpected issues.
