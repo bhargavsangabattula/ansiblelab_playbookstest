@@ -1,19 +1,17 @@
 qualys-jira-kustomize/
 │
 ├── base/
-│   ├── kustomization.yaml
-│   ├── secrets.yaml
-│   ├── configmap.yaml
-│   ├── redis-statefulset.yaml
-│   ├── qualys-deployment.yaml
-│   ├── service.yaml
-│   └── ingress.yaml
+│   ├── kustomization.yml
+│   ├── secrets.yml
+│   ├── configmap.yml
+│   ├── redis-statefulset.yml
+│   ├── qualys-deployment.yml
+│   ├── service.yml
+│   └── ingress.yml
 │
 └── overlays/
     └── dev/
-        ├── kustomization.yaml
-
-
+        ├── kustomization.yml
 
 # ==========================
 #  kustomization.yaml (base)
@@ -38,14 +36,25 @@ metadata:
   name: qualys-jira-secrets
   namespace: security
 type: Opaque
-data:
-  SPRING_REDIS_USER: "ZGVmYXVsdA=="  # "default" encoded in base64
-  SPRING_REDIS_PASSWORD: "SmlyYUNvbm5lY3RvclJlZGlzREI="  # "JiraConnectorRedisDB" encoded in base64
-  JIRA_USERNAME: "amlyYV91c2Vy"  # "jira_user" encoded in base64
-  JIRA_PASSWORD: "amlyYV9wYXNzd29yZA=="  # "jira_password" encoded in base64
-  QUALYS_API_KEY: "cXVhbHlzX2FwaV9rZXk="  # "qualys_api_key" encoded in base64
+stringData:  # Use stringData to allow raw strings (not base64 encoded)
+  QUALYS_API_URL: "https://qualysapi.gql.apps.qualys.com.au"
+  QUALYS_USERNAME: "mbanksa"
+  QUALYS_PASSWORD: ""
 
+  JIRA_URL: "https://in1bank-ltd.atlassian.net"
+  JIRA_USERNAME: ""
+  JIRA_API_TOKEN: ""
 
+  # Redis Configuration
+  SPRING_REDIS_HOST: "redis-dev.security.svc.cluster.local"
+  SPRING_REDIS_PORT: "6379"
+  SPRING_REDIS_PASSWORD: "RedisRedisPassword"  # Example password, replace with actual
+
+  # Proxy configuration, if used:
+  PROXY_HOST: "host"
+  PROXY_PORT: "null"
+  PROXY_USERNAME: "null"
+  PROXY_PASSWORD: "null"
 
 # ==========================
 #  configmap.yaml (base)
@@ -56,25 +65,92 @@ metadata:
   name: qualys-jira-config
   namespace: security
 data:
-  SPRING_REDIS_HOST: "redis-qualys-jira-connector.security.svc.cluster.local"
-  SPRING_REDIS_PORT: "6379"
+  config.json: |
+    {
+      "credentials": {
+        "qualys": {
+          "apiUrl": "${QUALYS_API_URL}",
+          "username": "${QUALYS_USERNAME}",
+          "password": "${QUALYS_PASSWORD}"
+        },
+        "jira": {
+          "instanceUrl": "${JIRA_URL}",
+          "username": "${JIRA_USERNAME}",
+          "apiToken": "${JIRA_API_TOKEN}"
+        },
+        "proxy": {
+          "host": "${PROXY_HOST}",
+          "port": ${PROXY_PORT},
+          "username": "${PROXY_USERNAME}",
+          "password": "${PROXY_PASSWORD}"
+        }
+      },
+      "redis": {
+        "host": "${SPRING_REDIS_HOST}",
+        "port": "${SPRING_REDIS_PORT}",
+        "password": "${SPRING_REDIS_PASSWORD}"
+      },
+      "profile": [
+        {
+          "profileId": "HD",
+          "name": "Host Detection",
+          "active": true,
+          "frequencyInMinutes": 5,
+          "filter": "",
+          "projectKey": "CVES",
+          "ticketingScheme": 1,
+          "batchSize": null,
+          "hostAssetApiFilter": null,
+          "pageSize": null,
+          "jiraTicketAction": null,
+          "logLevel": "INFO",
+          "createTicketsOnlyForRunningContainer": false
+        },
+        {
+          "profileId": "KB",
+          "name": "KnowledgeBase",
+          "active": true,
+          "frequencyInMinutes": 5,
+          "filter": "",
+          "projectKey": "CVES",
+          "ticketingScheme": 1,
+          "batchSize": 500,
+          "hostAssetApiFilter": null,
+          "pageSize": null,
+          "jiraTicketAction": null,
+          "logLevel": "INFO",
+          "createTicketsOnlyForRunningContainer": false
+        }
+        # Add other profiles as needed
+      ],
+      "global": {
+        "numberOfThreadsForJiraClient": 0,
+        "numberOfRetriesForJiraApiCall": 3,
+        "numberOfRetriesForQualysApiCall": 3,
+        "responseTimeout": 5,
+        "frequencyToProcessOutPutFiles": 5
+      },
+      "moduleConfiguration": {
+        "HD": {
+          "numberOfConcurrentTask": 2
+        },
+        "WAS": {
+          "numberOfConcurrentTask": 2
+        },
+        "CS-Container": {
+          "numberOfConcurrentTask": 2
+        },
+        "CS-Image": {
+          "numberOfConcurrentTask": 2
+        }
+      }
+    }
+
   REDIS_CONF: |
     bind 0.0.0.0
     port 6379
+    requirepass ${SPRING_REDIS_PASSWORD}
     appendonly yes
-  config.json: |
-    {
-      "jira": {
-        "url": "https://jira.example.com",
-        "username": "${JIRA_USERNAME}",
-        "password": "${JIRA_PASSWORD}"
-      },
-      "qualys": {
-        "url": "https://qualysapi.example.com",
-        "apikey": "${QUALYS_API_KEY}"
-      }
-      // Add other configuration parameters here
-    }
 
 
 # ==========================
@@ -90,52 +166,39 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: qualys-jira-connector
+      app: redis-qualys-jira-connector
   template:
     metadata:
       labels:
-        app: qualys-jira-connector
+        app: redis-qualys-jira-connector
     spec:
       containers:
-      - name: redis-qualys-jira-connector
-        image: qualys/redis-client-for-jira-integration:1.2.0
+      - name: redis
+        image: redis:6.2.6  # Use the Redis version you need
         ports:
         - containerPort: 6379
         env:
-        - name: SPRING_REDIS_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: qualys-jira-config
-              key: SPRING_REDIS_HOST
-        - name: SPRING_REDIS_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: qualys-jira-config
-              key: SPRING_REDIS_PORT
-        - name: SPRING_REDIS_USER
-          valueFrom:
-            secretKeyRef:
-              name: qualys-jira-secrets
-              key: SPRING_REDIS_USER
-        - name: SPRING_REDIS_PASSWORD
+        - name: REDIS_PASSWORD
           valueFrom:
             secretKeyRef:
               name: qualys-jira-secrets
               key: SPRING_REDIS_PASSWORD
+        command: ["redis-server", "/usr/local/etc/redis/redis.conf", "--requirepass", "$(REDIS_PASSWORD)"]
         volumeMounts:
+        - name: redis-data
+          mountPath: /data
         - name: redis-config-volume
           mountPath: /usr/local/etc/redis/redis.conf
           subPath: redis.conf
-        args: ["redis-server", "/usr/local/etc/redis/redis.conf"]
       volumes:
+      - name: redis-data
+        emptyDir: {}  # Use PersistentVolumeClaim for persistent storage
       - name: redis-config-volume
         configMap:
           name: qualys-jira-config
           items:
             - key: REDIS_CONF
               path: redis.conf
-
-
 
 # ==========================
 #  qualys-deployment.yaml (base)
@@ -159,43 +222,62 @@ spec:
       - name: qualys-jira-connector
         image: qualys/qualys-client-for-jira-integration:1.3.2
         env:
-        - name: SPRING_REDIS_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: qualys-jira-config
-              key: SPRING_REDIS_HOST
-        - name: SPRING_REDIS_PORT
-          valueFrom:
-            configMapKeyRef:
-              name: qualys-jira-config
-              key: SPRING_REDIS_PORT
-        - name: SPRING_REDIS_USER
+        - name: QUALYS_API_URL
           valueFrom:
             secretKeyRef:
               name: qualys-jira-secrets
-              key: SPRING_REDIS_USER
+              key: QUALYS_API_URL
+        - name: QUALYS_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: qualys-jira-secrets
+              key: QUALYS_USERNAME
+        - name: QUALYS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: qualys-jira-secrets
+              key: QUALYS_PASSWORD
+        - name: JIRA_URL
+          valueFrom:
+            secretKeyRef:
+              name: qualys-jira-secrets
+              key: JIRA_URL
+        - name: JIRA_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: qualys-jira-secrets
+              key: JIRA_USERNAME
+        - name: JIRA_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: qualys-jira-secrets
+              key: JIRA_API_TOKEN
+        - name: SPRING_REDIS_HOST
+          valueFrom:
+            secretKeyRef:
+              name: qualys-jira-secrets
+              key: SPRING_REDIS_HOST
+        - name: SPRING_REDIS_PORT
+          valueFrom:
+            secretKeyRef:
+              name: qualys-jira-secrets
+              key: SPRING_REDIS_PORT
         - name: SPRING_REDIS_PASSWORD
           valueFrom:
             secretKeyRef:
               name: qualys-jira-secrets
               key: SPRING_REDIS_PASSWORD
         volumeMounts:
-        - name: qualys-jira-volume
-          mountPath: /opt/qualys/common/jiraconnector/
         - name: config-volume
           mountPath: /etc/qualys/config.json
           subPath: config.json
       volumes:
-      - name: qualys-jira-volume
-        emptyDir: {}  # Temporary storage, no persistence
       - name: config-volume
         configMap:
           name: qualys-jira-config
           items:
             - key: config.json
               path: config.json
-
-
 
 
 # ==========================
