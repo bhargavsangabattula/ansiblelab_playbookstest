@@ -1,10 +1,150 @@
-Simplified deployment.yaml for qualys-jira-connector
+qualys-jira-kustomize/
+│
+├── base/
+│   ├── kustomization.yaml
+│   ├── secrets.yaml
+│   ├── configmap.yaml
+│   ├── redis-statefulset.yaml
+│   ├── qualys-deployment.yaml
+│   ├── service.yaml
+│   └── ingress.yaml
+│
+└── overlays/
+    └── dev/
+        ├── kustomization.yaml
 
+
+
+# ==========================
+#  kustomization.yaml (base)
+# ==========================
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - secrets.yaml
+  - configmap.yaml
+  - redis-statefulset.yaml
+  - qualys-deployment.yaml
+  - service.yaml
+  - ingress.yaml
+
+  # ==========================
+#  secrets.yaml (base)
+# ==========================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: qualys-jira-secrets
+  namespace: security
+type: Opaque
+data:
+  SPRING_REDIS_USER: "ZGVmYXVsdA=="  # "default" encoded in base64
+  SPRING_REDIS_PASSWORD: "SmlyYUNvbm5lY3RvclJlZGlzREI="  # "JiraConnectorRedisDB" encoded in base64
+  JIRA_USERNAME: "amlyYV91c2Vy"  # "jira_user" encoded in base64
+  JIRA_PASSWORD: "amlyYV9wYXNzd29yZA=="  # "jira_password" encoded in base64
+  QUALYS_API_KEY: "cXVhbHlzX2FwaV9rZXk="  # "qualys_api_key" encoded in base64
+
+
+
+# ==========================
+#  configmap.yaml (base)
+# ==========================
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: qualys-jira-config
+  namespace: security
+data:
+  SPRING_REDIS_HOST: "redis-qualys-jira-connector.security.svc.cluster.local"
+  SPRING_REDIS_PORT: "6379"
+  REDIS_CONF: |
+    bind 0.0.0.0
+    port 6379
+    appendonly yes
+  config.json: |
+    {
+      "jira": {
+        "url": "https://jira.example.com",
+        "username": "${JIRA_USERNAME}",
+        "password": "${JIRA_PASSWORD}"
+      },
+      "qualys": {
+        "url": "https://qualysapi.example.com",
+        "apikey": "${QUALYS_API_KEY}"
+      }
+      // Add other configuration parameters here
+    }
+
+
+# ==========================
+#  redis-statefulset.yaml (base)
+# ==========================
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-qualys-jira-connector
+  namespace: security
+spec:
+  serviceName: "redis"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qualys-jira-connector
+  template:
+    metadata:
+      labels:
+        app: qualys-jira-connector
+    spec:
+      containers:
+      - name: redis-qualys-jira-connector
+        image: qualys/redis-client-for-jira-integration:1.2.0
+        ports:
+        - containerPort: 6379
+        env:
+        - name: SPRING_REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: qualys-jira-config
+              key: SPRING_REDIS_HOST
+        - name: SPRING_REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: qualys-jira-config
+              key: SPRING_REDIS_PORT
+        - name: SPRING_REDIS_USER
+          valueFrom:
+            secretKeyRef:
+              name: qualys-jira-secrets
+              key: SPRING_REDIS_USER
+        - name: SPRING_REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: qualys-jira-secrets
+              key: SPRING_REDIS_PASSWORD
+        volumeMounts:
+        - name: redis-config-volume
+          mountPath: /usr/local/etc/redis/redis.conf
+          subPath: redis.conf
+        args: ["redis-server", "/usr/local/etc/redis/redis.conf"]
+      volumes:
+      - name: redis-config-volume
+        configMap:
+          name: qualys-jira-config
+          items:
+            - key: REDIS_CONF
+              path: redis.conf
+
+
+
+# ==========================
+#  qualys-deployment.yaml (base)
+# ==========================
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: qualys-jira-connector
-  namespace: qualys-jira-connector
+  namespace: security
 spec:
   replicas: 1
   selector:
@@ -16,39 +156,128 @@ spec:
         app: qualys-jira-connector
     spec:
       containers:
-      - name: qualys-client-service
+      - name: qualys-jira-connector
         image: qualys/qualys-client-for-jira-integration:1.3.2
-        ports:
-        - containerPort: 8080
+        env:
+        - name: SPRING_REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: qualys-jira-config
+              key: SPRING_REDIS_HOST
+        - name: SPRING_REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: qualys-jira-config
+              key: SPRING_REDIS_PORT
+        - name: SPRING_REDIS_USER
+          valueFrom:
+            secretKeyRef:
+              name: qualys-jira-secrets
+              key: SPRING_REDIS_USER
+        - name: SPRING_REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: qualys-jira-secrets
+              key: SPRING_REDIS_PASSWORD
         volumeMounts:
         - name: qualys-jira-volume
           mountPath: /opt/qualys/common/jiraconnector/
-        env:
-        - name: SPRING_REDIS_HOST
-          value: "your-redis-host-ip"
-        - name: SPRING_REDIS_PORT
-          value: "6379"
-        - name: SPRING_REDIS_USER
-          value: "default"
-        - name: SPRING_REDIS_PASSWORD
-          value: "JiraConnectorRedisDB"
+        - name: config-volume
+          mountPath: /etc/qualys/config.json
+          subPath: config.json
       volumes:
       - name: qualys-jira-volume
-        persistentVolumeClaim:
-          claimName: qualys-jira-pvc
+        emptyDir: {}  # Temporary storage, no persistence
+      - name: config-volume
+        configMap:
+          name: qualys-jira-config
+          items:
+            - key: config.json
+              path: config.json
 
 
-PersistentVolumeClaim for the Volume
-Here’s the PersistentVolumeClaim YAML:
+
+
+# ==========================
+#  service.yaml (base)
+# ==========================
 apiVersion: v1
-kind: PersistentVolumeClaim
+kind: Service
 metadata:
-  name: qualys-jira-pvc
-  namespace: qualys-jira-connector
+  name: redis
+  namespace: security
 spec:
-  accessModes:
-    - ReadWriteMany
-  resources:
-    requests:
-      storage: 1Gi
+  ports:
+  - port: 6379
+    name: redis
+  clusterIP: None  # Headless service, no load balancing
+  selector:
+    app: qualys-jira-connector
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qualys-jira-connector
+  namespace: security
+spec:
+  selector:
+    app: qualys-jira-connector
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+  type: ClusterIP  # Expose Qualys Jira connector within the cluster
+
+
+
+# ==========================
+#  ingress.yaml (base)
+# ==========================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: qualys-jira-ingress
+  namespace: security
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  rules:
+  - host: jira-connector.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: qualys-jira-connector
+            port:
+              number: 8080
+
+
+
+# ==========================
+#  kustomization.yaml (overlays/dev)
+# ==========================
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+labels:
+  environment: dev
+
+namespace: security
+
+# Reference remote resources
+resources:
+  - git::https://gitlab.com/your-repo/your-base-config.git//path/to/base?ref=branch-name
+  - git::https://gitlab.com/your-repo/another-base-config.git//path/to/another-base?ref=branch-name
+
+# Reference remote components
+components:
+  - git::https://gitlab.com/your-repo/your-component-config.git//path/to/component?ref=branch-name
+  - git::https://gitlab.com/your-repo/another-component-config.git//path/to/another-component?ref=branch-name
+
+
+
+
 
