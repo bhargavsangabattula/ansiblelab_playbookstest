@@ -1,1 +1,113 @@
-
+{
+  "credentials" : {
+    "qualys" : {
+      "apiUrl" : "https://qualysapi.example.com",
+      "username" : "",
+      "password" : ""
+    },
+    "jira" : {
+      "instanceUrl" : "xxxxx",
+      "username" : "example@example.com", 
+      "apiToken" : "",
+      "instanceType" : "onCloud"
+    },
+    "proxy" : {
+      "host" : "",
+      "port" : null,
+      "username" : "",
+      "password" : ""
+    }
+  },
+  "profile" : [ {
+    "profileId" : "HD",
+    "name" : "Host Detection",
+    "active" : true,
+    "frequencyInMinutes" : 5,
+    "filter" : "",
+    "projectKey" : "CVES",
+    "ticketingScheme" : 1,
+    "batchSize" : null,
+    "hostAssetApiFilter" : "",
+    "pageSize" : null,
+    "jiraTicketAction" : null,
+    "logLevel" : "INFO",
+    "createTicketsOnlyForRunningContainer" : false
+  }, {
+    "profileId" : "KB",
+    "name" : "Knowledgebase",
+    "active" : true,
+    "frequencyInMinutes" : 5,
+    "filter" : "",
+    "projectKey" : "CVES",
+    "ticketingScheme" : 1,
+    "batchSize" : 500,
+    "hostAssetApiFilter" : null,
+    "pageSize" : null,
+    "jiraTicketAction" : null,
+    "logLevel" : "INFO",
+    "createTicketsOnlyForRunningContainer" : false
+  }, {
+    "profileId" : "WAS",
+    "name" : "Web App Scan",
+    "active" : false,
+    "frequencyInMinutes" : 5,
+    "filter" : "",
+    "projectKey" : "",
+    "ticketingScheme" : 3,
+    "batchSize" : null,
+    "hostAssetApiFilter" : null,
+    "pageSize" : null,
+    "jiraTicketAction" : null,
+    "logLevel" : "INFO",
+    "createTicketsOnlyForRunningContainer" : false
+  }, {
+    "profileId" : "CS-Container",
+    "name" : "CS Container",
+    "active" : false,
+    "frequencyInMinutes" : 5,
+    "filter" : "",
+    "projectKey" : "",
+    "ticketingScheme" : 5,
+    "batchSize" : null,
+    "hostAssetApiFilter" : null,
+    "pageSize" : 1000,
+    "jiraTicketAction" : null,
+    "logLevel" : "INFO",
+    "createTicketsOnlyForRunningContainer" : false
+  }, {
+    "profileId" : "CS-Image",
+    "name" : "CS Image",
+    "active" : false,
+    "frequencyInMinutes" : 5,
+    "filter" : "",
+    "projectKey" : "",
+    "ticketingScheme" : 7,
+    "batchSize" : null,
+    "hostAssetApiFilter" : null,
+    "pageSize" : 1000,
+    "jiraTicketAction" : "<Create or Update>",
+    "logLevel" : "INFO",
+    "createTicketsOnlyForRunningContainer" : false
+  } ],
+  "global" : {
+    "numberOfThreadsForJiraClient" : 0,
+    "numberOfRetriesForJiraApiCall" : 3,
+    "numberOfRetriesForQualysApiCall" : 3,
+    "responseTimeout" : 5,
+    "frequencyToProcessOutputFiles" : 5
+  },
+  "moduleConfiguration" : {
+    "HD" : {
+      "numberOfConcurrentTask" : 2
+    },
+    "WAS" : {
+      "numberOfConcurrentTask" : 2
+    },
+    "CS-Container" : {
+      "numberOfConcurrentTask" : 2
+    },
+    "CS-Image" : {
+      "numberOfConcurrentTask" : 2
+    }
+  }
+}
