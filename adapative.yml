@@ -1,113 +1,53 @@
-{
-  "credentials" : {
-    "qualys" : {
-      "apiUrl" : "https://qualysapi.example.com",
-      "username" : "",
-      "password" : ""
-    },
-    "jira" : {
-      "instanceUrl" : "xxxxx",
-      "username" : "example@example.com", 
-      "apiToken" : "",
-      "instanceType" : "onCloud"
-    },
-    "proxy" : {
-      "host" : "",
-      "port" : null,
-      "username" : "",
-      "password" : ""
-    }
-  },
-  "profile" : [ {
-    "profileId" : "HD",
-    "name" : "Host Detection",
-    "active" : true,
-    "frequencyInMinutes" : 5,
-    "filter" : "",
-    "projectKey" : "CVES",
-    "ticketingScheme" : 1,
-    "batchSize" : null,
-    "hostAssetApiFilter" : "",
-    "pageSize" : null,
-    "jiraTicketAction" : null,
-    "logLevel" : "INFO",
-    "createTicketsOnlyForRunningContainer" : false
-  }, {
-    "profileId" : "KB",
-    "name" : "Knowledgebase",
-    "active" : true,
-    "frequencyInMinutes" : 5,
-    "filter" : "",
-    "projectKey" : "CVES",
-    "ticketingScheme" : 1,
-    "batchSize" : 500,
-    "hostAssetApiFilter" : null,
-    "pageSize" : null,
-    "jiraTicketAction" : null,
-    "logLevel" : "INFO",
-    "createTicketsOnlyForRunningContainer" : false
-  }, {
-    "profileId" : "WAS",
-    "name" : "Web App Scan",
-    "active" : false,
-    "frequencyInMinutes" : 5,
-    "filter" : "",
-    "projectKey" : "",
-    "ticketingScheme" : 3,
-    "batchSize" : null,
-    "hostAssetApiFilter" : null,
-    "pageSize" : null,
-    "jiraTicketAction" : null,
-    "logLevel" : "INFO",
-    "createTicketsOnlyForRunningContainer" : false
-  }, {
-    "profileId" : "CS-Container",
-    "name" : "CS Container",
-    "active" : false,
-    "frequencyInMinutes" : 5,
-    "filter" : "",
-    "projectKey" : "",
-    "ticketingScheme" : 5,
-    "batchSize" : null,
-    "hostAssetApiFilter" : null,
-    "pageSize" : 1000,
-    "jiraTicketAction" : null,
-    "logLevel" : "INFO",
-    "createTicketsOnlyForRunningContainer" : false
-  }, {
-    "profileId" : "CS-Image",
-    "name" : "CS Image",
-    "active" : false,
-    "frequencyInMinutes" : 5,
-    "filter" : "",
-    "projectKey" : "",
-    "ticketingScheme" : 7,
-    "batchSize" : null,
-    "hostAssetApiFilter" : null,
-    "pageSize" : 1000,
-    "jiraTicketAction" : "<Create or Update>",
-    "logLevel" : "INFO",
-    "createTicketsOnlyForRunningContainer" : false
-  } ],
-  "global" : {
-    "numberOfThreadsForJiraClient" : 0,
-    "numberOfRetriesForJiraApiCall" : 3,
-    "numberOfRetriesForQualysApiCall" : 3,
-    "responseTimeout" : 5,
-    "frequencyToProcessOutputFiles" : 5
-  },
-  "moduleConfiguration" : {
-    "HD" : {
-      "numberOfConcurrentTask" : 2
-    },
-    "WAS" : {
-      "numberOfConcurrentTask" : 2
-    },
-    "CS-Container" : {
-      "numberOfConcurrentTask" : 2
-    },
-    "CS-Image" : {
-      "numberOfConcurrentTask" : 2
-    }
-  }
-}
+1. create environment variables
+2. store the secretes in env variables
+3. create configmap >> for config.json.template | envsubst
+4. create init container to copy the config.json.template to config.json file to /opt/qualys/common/jiraconnector/config/config.json
+
+
+2024-09-07 10:07:10,407 [main] ERROR com.qualys.qualysclient.utils.LogUtil              - FileUtil writeToFile(). Failed to write to file. Caused by : /opt/qualys/common/jiraconnector/config/config.json.templatejava.nio.file.AccessDeniedException: /opt/qualys/common/jiraconnector/config/config.json.template
+	at java.base/sun.nio.fs.UnixException.translateToIOException(UnixException.java:90)
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:106)
+	at java.base/sun.nio.fs.UnixException.rethrowAsIOException(UnixException.java:111)
+	at java.base/sun.nio.fs.UnixFileSystemProvider.newByteChannel(UnixFileSystemProvider.java:218)
+	at java.base/java.nio.file.Files.newByteChannel(Files.java:380)
+	at java.base/java.nio.file.Files.createFile(Files.java:658)
+	at com.qualys.qualysclient.utils.FileUtil.writeToFile(FileUtil.java:54)
+	at com.qualys.qualysclient.utils.FileUtil.copyConfigTemplateFiles(FileUtil.java:125)
+	at com.qualys.qualysclient.QualysClientApplication.main(QualysClientApplication.java:23)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:91)
+	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:53)
+	at org.springframework.boot.loader.launch.JarLauncher.main(JarLauncher.java:58)
+
+
+2024-09-07 10:07:13,312 [main] ERROR com.qualys.qualysclient.utils.FileUtil             - FileUtil writeToConfigFile(). Caused by : /opt/qualys/common/jiraconnector/config/config.json (Read-only file system)
+java.io.FileNotFoundException: /opt/qualys/common/jiraconnector/config/config.json (Read-only file system)
+	at java.base/java.io.FileOutputStream.open0(Native Method)
+	at java.base/java.io.FileOutputStream.open(FileOutputStream.java:293)
+	at java.base/java.io.FileOutputStream.<init>(FileOutputStream.java:235)
+	at java.base/java.io.FileOutputStream.<init>(FileOutputStream.java:184)
+	at com.fasterxml.jackson.core.TokenStreamFactory._fileOutputStream(TokenStreamFactory.java:294)
+	at com.fasterxml.jackson.core.JsonFactory.createGenerator(JsonFactory.java:1428)
+	at com.fasterxml.jackson.databind.ObjectWriter.createGenerator(ObjectWriter.java:764)
+	at com.fasterxml.jackson.databind.ObjectWriter.writeValue(ObjectWriter.java:1081)
+	at com.qualys.qualysclient.utils.FileUtil.writeToConfigFile(FileUtil.java:159)
+	at com.qualys.qualysclient.service.WatcherService.updateConfigFile(WatcherService.java:310)
+	at com.qualys.qualysclient.service.WatcherService.encryptCredentials(WatcherService.java:283)
+	at com.qualys.qualysclient.service.WatcherService.processConfigFile(WatcherService.java:163)
+	at com.qualys.qualysclient.service.WatcherService.init(WatcherService.java:101)
+	at com.qualys.qualysclient.QualysClientApplication.main(QualysClientApplication.java:27)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:568)
+	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:91)
+	at org.springframework.boot.loader.launch.Launcher.launch(Launcher.java:53)
+	at org.springframework.boot.loader.launch.JarLauncher.main(JarLauncher.java:58)
+
+2024-09-07 10:07:02,253 [main] INFO  com.qualys.jiraclient.utils.LogUtil                - File /opt/qualys/common/jiraconnector/jiraconnectorconfig/jira_connector_default_config.json does not exist
+2024-09-07 10:07:02,275 [main] ERROR c.q.j.s.EncryptedCredentialsService                - Jira credentials were not found in the file. Retrying after 1 minute...
+2024-09-07 10:08:02,276 [main] INFO  c.q.j.s.EncryptedCredentialsService                - Fetching credentials for Jira
+2024-09-07 10:08:02,292 [main] ERROR c.q.j.s.EncryptedCredentialsService                - Jira credentials were not found in the file. Retrying after 1 minute...
